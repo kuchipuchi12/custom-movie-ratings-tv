@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What's good tonight</title>
+<style>
+  :root{
+    --bg:#14161b; --panel:#1d2027; --line:#2c303a; --text:#eceef2; --muted:#9aa1ae;
+    --accent:#f5c518; --rt:#fa320a; --focus:#7cc4ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button,select,input{font:inherit;color:inherit}
+  :focus-visible{outline:4px solid var(--focus);outline-offset:2px}
+  .wrap{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  h1{font-size:26px;margin:0;font-weight:700}
+  .btn{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;cursor:pointer;min-height:46px}
+  .btn:hover{border-color:#4a5060}
+  .btn.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
+  /* filters */
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .f{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .f label{font-size:13px;color:var(--muted)}
+  .f select,.f input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:46px}
+  .f input[type=number]{width:96px}
+  .range{display:flex;align-items:center;gap:10px;min-height:46px}
+  .range input{width:150px;accent-color:var(--accent)}
+  .range output{min-width:48px;font-weight:700}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:9px 14px;cursor:pointer;min-height:46px}
+  .chip[aria-pressed=true]{background:#2b3346;border-color:var(--focus)}
+  .bar2{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin:0 2px 14px;color:var(--muted);font-size:14px}
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column}
+  .card:focus-visible{outline:5px solid var(--focus);transform:scale(1.03)}
+  .poster{aspect-ratio:2/3;background:#262a33;width:100%;object-fit:cover;display:block}
+  .noposter{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;color:var(--muted)}
+  .meta{padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .t{font-weight:700;font-size:15px;line-height:1.25}
+  .sub{color:var(--muted);font-size:13px}
+  .scores{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+  .s{font-weight:700;font-size:14px;border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .s.imdb{background:var(--accent);color:#111}
+  .s.rt{background:var(--rt);color:#fff}
+  .s.na{background:#2c303a;color:var(--muted);font-weight:500}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  /* dialogs */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  .overlay.open{display:flex}
+  .dlg{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:760px;width:100%;max-height:92vh;overflow:auto;padding:22px}
+  .dlg h2{margin:0 0 6px;font-size:24px}
+  .dlg p{margin:8px 0}
+  .field{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+  .field input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:48px;width:100%}
+  .hint{color:var(--muted);font-size:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .detail{display:grid;grid-template-columns:200px 1fr;gap:20px}
+  .detail img{width:100%;border-radius:10px}
+  .err{color:#ff8a80}
+  a{color:var(--focus)}
+  footer{margin-top:30px;color:var(--muted);font-size:13px}
+  #ftoggle{display:none}
+  @media (max-width:600px){
+    #ftoggle{display:inline-block}
+    .filters{display:none}
+    .filters.open{display:flex}
+    .wrap{padding:12px}
+    h1{font-size:19px}
+    header .btn{padding:10px 12px}
+    .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .detail{grid-template-columns:1fr}
+    .detail img{max-width:180px}
+    .range input{width:120px}
+  }
+  @media (min-width:1700px){ /* TV */
+    html,body{font-size:19px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>What's good tonight</h1>
+    <div class="row" style="margin:0;flex-wrap:nowrap"><button class="btn" id="ftoggle" aria-expanded="false">Filters</button><button class="btn" id="openSettings">Settings</button></div>
+  </header>
+
+  <section class="filters" id="filters" aria-label="Filters">
+    <div class="f"><label>Service</label><div class="chips" id="svcChips"></div></div>
+    <div class="f"><label for="type">Type</label>
+      <select id="type"><option value="all">Movies and series</option><option value="movie">Movies</option><option value="tv">Series</option></select></div>
+    <div class="f"><label for="genre">Genre</label><select id="genre"><option value="">Any genre</option></select></div>
+    <div class="f"><label for="yFrom">Year from</label><input type="number" id="yFrom" placeholder="Any"></div>
+    <div class="f"><label for="yTo">Year to</label><input type="number" id="yTo" placeholder="Any"></div>
+    <div class="f"><label for="imdbMin">IMDb minimum</label>
+      <div class="range"><input type="range" id="imdbMin" min="0" max="9" step="0.5" value="0"><output id="imdbOut">Off</output></div></div>
+    <div class="f"><label for="rtMin">Rotten Tomatoes minimum</label>
+      <div class="range"><input type="range" id="rtMin" min="0" max="95" step="5" value="0"><output id="rtOut">Off</output></div></div>
+    <div class="f"><label for="sort">Sort by</label>
+      <select id="sort"><option value="imdb">IMDb score</option><option value="rt">Rotten Tomatoes</option><option value="new">Newest</option><option value="pop">Most popular</option></select></div>
+    <div class="f"><label>&nbsp;</label><button class="btn" id="reset">Reset</button></div>
+  </section>
+
+  <div class="bar2"><span id="status">Starting</span><button class="btn" id="more">Load more titles</button></div>
+  <div class="grid" id="grid"></div>
+  <footer>Streaming data and posters from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings from OMDb.</footer>
+</div>
+
+<div class="overlay" id="setOv" role="dialog" aria-modal="true" aria-labelledby="setH">
+  <div class="dlg">
+    <h2 id="setH">Settings</h2>
+    <p class="hint">Your keys are saved only in this browser on this device.</p>
+    <div class="field"><label for="kT">TMDB API Key</label><input id="kT" autocomplete="off" spellcheck="false"></div>
+    <div class="field"><label for="kO">OMDb API key</label><input id="kO" autocomplete="off" spellcheck="false"></div>
+    <div class="field"><label>Your services in Bulgaria</label><div class="chips" id="svcPick"><span class="hint">Save your TMDB key to see the list.</span></div></div>
+    <p class="err" id="setErr"></p>
+    <div class="row"><button class="btn primary" id="saveSet">Save</button><button class="btn" id="closeSet">Close</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="detOv" role="dialog" aria-modal="true"><div class="dlg" id="det"></div></div>
+
+<script>
+(() => {
+const REGION = 'BG';
+const TMDB = 'https://api.themoviedb.org/3';
+const IMG = 'https://image.tmdb.org/t/p/';
+const OMDB = 'https://www.omdbapi.com/';
+const OMDB_DAILY = 950;            // stay under the 1,000 free limit
+const RATING_TTL = 14*864e5;       // re-check scores after 14 days
+const DEFAULT_SVC = ['Netflix','HBO Max','Max','Disney Plus','SkyShowtime','Amazon Prime Video'];
+
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('gt.'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('gt.'+k, JSON.stringify(v)); }catch(e){} }
+};
+
+let keys = store.get('keys', {tmdb:'', omdb:''});
+let services = store.get('services', null);          // [{id,name}]
+let allServices = [];
+let cache = store.get('cache', {imdbId:{}, ratings:{}});
+let usage = store.get('usage', {day:'', n:0});
+let pages = store.get('pages', 3);
+const DEF_FILTERS = {svc:[], type:'all', genre:'', yFrom:'', yTo:'', imdbMin:0, rtMin:0, sort:'imdb'};
+let F = Object.assign({}, DEF_FILTERS, store.get('filters', {}));
+const titles = new Map();
+let genres = {};
+let queue = [], running = 0, stopped = '';
+
+const today = () => new Date().toISOString().slice(0,10);
+function omdbLeft(){ if(usage.day !== today()) usage = {day:today(), n:0}; return OMDB_DAILY - usage.n; }
+
+async function tmdb(path, params={}){
+  const u = new URL(TMDB + path);
+  u.searchParams.set('api_key', keys.tmdb);
+  for(const [k,v] of Object.entries(params)) u.searchParams.set(k, v);
+  const r = await fetch(u);
+  if(r.status === 401) throw new Error('tmdb-key');
+  if(!r.ok) throw new Error('tmdb-'+r.status);
+  return r.json();
+}
+
+/* ---------- settings ---------- */
+function openSettings(){
+  $('#kT').value = keys.tmdb; $('#kO').value = keys.omdb; $('#setErr').textContent='';
+  renderPicker(); $('#setOv').classList.add('open'); $('#kT').focus();
+}
+function closeSettings(){ $('#setOv').classList.remove('open'); $('#openSettings').focus(); }
+async function loadServiceList(){
+  const [m,t] = await Promise.all([
+    tmdb('/watch/providers/movie',{watch_region:REGION}),
+    tmdb('/watch/providers/tv',{watch_region:REGION})]);
+  const map = new Map();
+  for(const p of [...m.results, ...t.results]){
+    if(!map.has(p.provider_id)) map.set(p.provider_id, {id:p.provider_id, name:p.provider_name, prio:(p.display_priorities||{})[REGION] ?? p.display_priority ?? 999});
+  }
+  allServices = [...map.values()].sort((a,b)=>a.prio-b.prio);
+}
+function renderPicker(){
+  const box = $('#svcPick');
+  if(!allServices.length){ return; }
+  const chosen = new Set((services||[]).map(s=>s.id));
+  box.innerHTML = '';
+  allServices.slice(0,40).forEach(s=>{
+    const b = document.createElement('button');
+    b.className='chip'; b.type='button'; b.textContent=s.name; b.dataset.id=s.id;
+    b.setAttribute('aria-pressed', chosen.has(s.id));
+    b.onclick=()=>b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true');
+    box.appendChild(b);
+  });
+}
+async function saveSettings(){
+  const tk = $('#kT').value.trim(), ok = $('#kO').value.trim();
+  const err = $('#setErr'); err.textContent='Checking keys...';
+  const prevT = keys.tmdb; keys.tmdb = tk;
+  try{ if(!allServices.length || tk!==prevT) { await loadServiceList(); } }
+  catch(e){ keys.tmdb = prevT; err.textContent = 'The TMDB key did not work. Copy the short "API Key", not the long token.'; return; }
+  try{
+    const r = await (await fetch(`${OMDB}?apikey=${encodeURIComponent(ok)}&i=tt0111161`)).json();
+    if(r.Response === 'False'){ err.textContent = 'The OMDb key did not work. Check you clicked the activation link in the OMDb email.'; return; }
+  }catch(e){ err.textContent = 'Could not reach OMDb. Check your internet and try again.'; return; }
+  keys.omdb = ok; store.set('keys', keys);
+  let picked = [...$('#svcPick').querySelectorAll('.chip[aria-pressed=true]')].map(b=>allServices.find(s=>s.id==b.dataset.id));
+  if(!picked.length){
+    if(!services){ renderPickerDefaults(); err.textContent='Keys work. Now tick the services you have, then press Save again.'; return; }
+    err.textContent='Tick at least one service.'; return;
+  }
+  services = picked; store.set('services', services);
+  F.svc = F.svc.filter(id=>services.some(s=>s.id===id)); saveFilters();
+  closeSettings(); start();
+}
+function renderPickerDefaults(){
+  const want = new Set(DEFAULT_SVC.map(n=>n.toLowerCase()));
+  services = allServices.filter(s=>want.has(s.name.toLowerCase()));
+  renderPicker(); services = null;
+}
+
+/* ---------- loading titles ---------- */
+async function loadGenres(){
+  const [m,t] = await Promise.all([tmdb('/genre/movie/list'), tmdb('/genre/tv/list')]);
+  genres = {};
+  for(const g of [...m.genres, ...t.genres]) genres[g.id] = g.name;
+  const names = [...new Set(Object.values(genres))].sort();
+  const sel = $('#genre'); sel.innerHTML = '<option value="">Any genre</option>' + names.map(n=>`<option>${esc(n)}</option>`).join('');
+  sel.value = F.genre;
+}
+async function loadTitles(fromPage, toPage){
+  setStatus('Loading what is on your services...');
+  const jobs = [];
+  for(const s of services) for(const type of ['movie','tv']) for(let p=fromPage; p<=toPage; p++){
+    jobs.push(tmdb('/discover/'+type, {
+      watch_region:REGION, with_watch_providers:s.id, with_watch_monetization_types:'flatrate',
+      sort_by:'popularity.desc', page:p, 'vote_count.gte':20, include_adult:'false'
+    }).then(d=>{
+      for(const r of d.results){
+        const key = type+':'+r.id;
+        let t = titles.get(key);
+        if(!t){
+          t = {key, id:r.id, type, title:r.title||r.name, date:r.release_date||r.first_air_date||'',
+               genres:(r.genre_ids||[]).map(g=>genres[g]).filter(Boolean), poster:r.poster_path,
+               overview:r.overview, pop:r.popularity, svc:new Set()};
+          titles.set(key, t);
+          const id = cache.imdbId[key];
+          if(id !== undefined) t.imdbId = id;
+          if(id && cache.ratings[id]) Object.assign(t, cache.ratings[id]);
+        }
+        t.svc.add(s.id);
+      }
+    }).catch(e=>{ if(e.message==='tmdb-key') throw e; }));
+  }
+  await Promise.all(jobs);
+  render();
+  enqueueAll();
+}
+function enqueueAll(){
+  const now = Date.now();
+  queue = [...titles.values()]
+    .filter(t=>!(t.imdbId===null || (t.imdbId && cache.ratings[t.imdbId] && now - cache.ratings[t.imdbId].at < RATING_TTL)))
+    .sort((a,b)=>b.pop-a.pop);
+  pump();
+}
+function pump(){
+  while(running < 4 && queue.length){
+    if(omdbLeft() <= 0){ stopped = 'limit'; break; }
+    const t = queue.shift(); running++;
+    enrich(t).catch(()=>{}).finally(()=>{ running--; scheduleRender(); pump(); });
+  }
+  scheduleRender();
+}
+async function enrich(t){
+  if(t.imdbId === undefined){
+    const ex = await tmdb(`/${t.type}/${t.id}/external_ids`);
+    t.imdbId = ex.imdb_id || null; cache.imdbId[t.key] = t.imdbId;
+  }
+  if(!t.imdbId) return;
+  if(omdbLeft() <= 0){ stopped='limit'; return; }
+  usage.n++; store.set('usage', usage);
+  const r = await (await fetch(`${OMDB}?apikey=${encodeURIComponent(keys.omdb)}&i=${t.imdbId}`)).json();
+  if(r.Response === 'False'){ if(/limit/i.test(r.Error||'')) { usage.n = OMDB_DAILY; stopped='limit'; } return; }
+  const imdb = parseFloat(r.imdbRating); const rtR = (r.Ratings||[]).find(x=>x.Source==='Rotten Tomatoes');
+  const rec = {imdb: isNaN(imdb)?null:imdb, votes:r.imdbVotes||'', rt: rtR?parseInt(rtR.Value):null, at:Date.now()};
+  cache.ratings[t.imdbId] = rec; Object.assign(t, rec);
+}
+let saveTimer;
+function persistCache(){ clearTimeout(saveTimer); saveTimer = setTimeout(()=>store.set('cache', cache), 800); }
+
+/* ---------- filters + render ---------- */
+function saveFilters(){ store.set('filters', F); }
+function renderSvcChips(){
+  const box = $('#svcChips'); box.innerHTML='';
+  const all = document.createElement('button'); all.className='chip'; all.type='button'; all.textContent='All';
+  all.setAttribute('aria-pressed', F.svc.length===0);
+  all.onclick=()=>{ F.svc=[]; saveFilters(); renderSvcChips(); render(); };
+  box.appendChild(all);
+  for(const s of services||[]){
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=s.name;
+    b.setAttribute('aria-pressed', F.svc.includes(s.id));
+    b.onclick=()=>{ F.svc = F.svc.includes(s.id) ? F.svc.filter(x=>x!==s.id) : [...F.svc, s.id]; saveFilters(); renderSvcChips(); render(); };
+    box.appendChild(b);
+  }
+}
+function syncInputs(){
+  $('#type').value=F.type; $('#genre').value=F.genre; $('#yFrom').value=F.yFrom; $('#yTo').value=F.yTo;
+  $('#imdbMin').value=F.imdbMin; $('#rtMin').value=F.rtMin; $('#sort').value=F.sort; outs();
+}
+function outs(){
+  $('#imdbOut').textContent = +F.imdbMin ? (+F.imdbMin).toFixed(1)+'+' : 'Off';
+  $('#rtOut').textContent = +F.rtMin ? F.rtMin+'%+' : 'Off';
+}
+let rTimer; function scheduleRender(){ clearTimeout(rTimer); rTimer=setTimeout(()=>{ render(); persistCache(); }, 400); }
+
+function render(){
+  const yF = parseInt(F.yFrom)||0, yT = parseInt(F.yTo)||9999, im = +F.imdbMin, rt = +F.rtMin;
+  let list = [...titles.values()].filter(t=>{
+    if(F.type!=='all' && t.type!==F.type) return false;
+    if(F.svc.length && !F.svc.some(id=>t.svc.has(id))) return false;
+    if(F.genre && !t.genres.includes(F.genre)) return false;
+    const y = parseInt(t.date)||0;
+    if((F.yFrom||F.yTo) && (!y || y<yF || y>yT)) return false;
+    if(im && !(t.imdb>=im)) return false;
+    if(rt && !(t.rt>=rt)) return false;
+    return true;
+  });
+  const by = {
+    imdb:(a,b)=>(b.imdb??-1)-(a.imdb??-1) || b.pop-a.pop,
+    rt:(a,b)=>(b.rt??-1)-(a.rt??-1) || (b.imdb??-1)-(a.imdb??-1),
+    new:(a,b)=>(b.date||'').localeCompare(a.date||''),
+    pop:(a,b)=>b.pop-a.pop };
+  list.sort(by[F.sort]);
+  const grid = $('#grid');
+  const focusedKey = document.activeElement?.dataset?.key;
+  if(!list.length){
+    grid.innerHTML = `<div class="empty">${titles.size ? 'Nothing matches these filters. Try lowering a minimum or pressing Reset.' : 'Loading...'}</div>`;
+  } else {
+    grid.innerHTML = list.slice(0,400).map(card).join('');
+  }
+  if(focusedKey){ const el = grid.querySelector(`[data-key="${focusedKey}"]`); if(el) el.focus({preventScroll:true}); }
+  const pending = queue.length + running;
+  let msg = `${list.length} of ${titles.size} titles`;
+  if(pending) msg += ` · getting scores for ${pending} more`;
+  if(stopped==='limit') msg = `${list.length} of ${titles.size} titles. Daily score limit reached, the rest will fill in tomorrow.`;
+  setStatus(msg.replace(' · ', '. '));
+}
+function card(t){
+  const y = (t.date||'').slice(0,4);
+  const sv = [...t.svc].map(id=>(services.find(s=>s.id===id)||{}).name).filter(Boolean).join(', ');
+  const scores = (t.imdb!=null || t.rt!=null || t.imdbId===null || t.at)
+    ? `${t.imdb!=null?`<span class="s imdb">IMDb ${t.imdb.toFixed(1)}</span>`:''}${t.rt!=null?`<span class="s rt">RT ${t.rt}%</span>`:''}${t.imdb==null&&t.rt==null?'<span class="s na">No score</span>':''}`
+    : '<span class="s na">Loading score</span>';
+  const img = t.poster ? `<img class="poster" loading="lazy" alt="" src="${IMG}w342${t.poster}">` : `<div class="poster noposter">${esc(t.title)}</div>`;
+  return `<button class="card" data-key="${t.key}">${img}<div class="meta"><div class="t">${esc(t.title)}</div>
+    <div class="sub">${y}${y?', ':''}${t.type==='tv'?'Series':'Movie'}</div><div class="sub">${esc(sv)}</div><div class="scores">${scores}</div></div></button>`;
+}
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function setStatus(s){ $('#status').textContent = s; }
+
+function openDetail(key){
+  const t = titles.get(key); if(!t) return;
+  const sv = [...t.svc].map(id=>(services.find(s=>s.id===id)||{}).name).filter(Boolean).join(', ');
+  $('#det').innerHTML = `<div class="detail">${t.poster?`<img alt="" src="${IMG}w500${t.poster}">`:'<div></div>'}<div>
+    <h2>${esc(t.title)}</h2><p class="hint">${(t.date||'').slice(0,4)} ${t.type==='tv'?'Series':'Movie'}${t.genres.length?', '+esc(t.genres.join(', ')):''}</p>
+    <div class="scores">${t.imdb!=null?`<span class="s imdb">IMDb ${t.imdb.toFixed(1)}</span>`:''}${t.rt!=null?`<span class="s rt">Rotten Tomatoes ${t.rt}%</span>`:''}</div>
+    ${t.votes?`<p class="hint">${esc(t.votes)} IMDb votes</p>`:''}
+    <p><strong>Watch on:</strong> ${esc(sv)}</p><p>${esc(t.overview||'')}</p>
+    ${t.imdbId?`<p><a href="https://www.imdb.com/title/${t.imdbId}/" target="_blank" rel="noopener">Open on IMDb</a></p>`:''}
+    <div class="row"><button class="btn primary" id="closeDet">Close</button></div></div></div>`;
+  $('#detOv').classList.add('open'); $('#closeDet').onclick = closeDetail; $('#closeDet').focus();
+  $('#detOv').dataset.ret = key;
+}
+function closeDetail(){
+  $('#detOv').classList.remove('open');
+  const el = $(`#grid [data-key="${$('#detOv').dataset.ret}"]`); if(el) el.focus();
+}
+
+/* ---------- remote control arrows in the grid ---------- */
+function cols(){ const g=$('#grid'); return getComputedStyle(g).gridTemplateColumns.split(' ').length; }
+$('#grid').addEventListener('keydown', e=>{
+  const cards=[...document.querySelectorAll('#grid .card')]; const i=cards.indexOf(document.activeElement);
+  if(i<0) return; const c=cols(); let j=null;
+  if(e.key==='ArrowRight') j=i+1; if(e.key==='ArrowLeft') j=i-1; if(e.key==='ArrowDown') j=i+c; if(e.key==='ArrowUp') j=i-c;
+  if(j===null) return; e.preventDefault();
+  if(j<0){ $('#sort').focus(); return; }
+  if(cards[j]){ cards[j].focus(); cards[j].scrollIntoView({block:'nearest'}); }
+});
+$('#grid').addEventListener('click', e=>{ const c=e.target.closest('.card'); if(c) openDetail(c.dataset.key); });
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' || e.key==='Backspace' && !/INPUT|SELECT/.test(e.target.tagName)){
+    if($('#detOv').classList.contains('open')){ e.preventDefault(); closeDetail(); }
+    else if($('#setOv').classList.contains('open') && e.key==='Escape' && services){ closeSettings(); }
+  }
+});
+
+/* ---------- wiring ---------- */
+const bind = (id, k, ev='change') => $(id).addEventListener(ev, e=>{ F[k]=e.target.value; outs(); saveFilters(); render(); });
+bind('#type','type'); bind('#genre','genre'); bind('#yFrom','yFrom','input'); bind('#yTo','yTo','input');
+bind('#imdbMin','imdbMin','input'); bind('#rtMin','rtMin','input'); bind('#sort','sort');
+$('#reset').onclick=()=>{ F=Object.assign({}, DEF_FILTERS); saveFilters(); syncInputs(); renderSvcChips(); render(); };
+$('#ftoggle').onclick=e=>{ const o=$('#filters').classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded',o); };
+$('#openSettings').onclick=openSettings; $('#closeSet').onclick=()=>{ if(services) closeSettings(); };
+$('#saveSet').onclick=saveSettings;
+$('#more').onclick=async()=>{ const from=pages+1; pages+=2; store.set('pages',pages); await loadTitles(from, pages); };
+
+async function start(){
+  titles.clear(); stopped='';
+  syncInputs(); renderSvcChips();
+  try{ await loadGenres(); syncInputs(); await loadTitles(1, pages); }
+  catch(e){ setStatus(e.message==='tmdb-key' ? 'Your TMDB key stopped working. Open Settings.' : 'Could not load. Check your internet and reload.'); }
+}
+
+if(keys.tmdb && keys.omdb && services){ start(); }
+else { setStatus('Open Settings to add your keys.'); openSettings(); }
+})();
+</script>
+</body>
+</html>
