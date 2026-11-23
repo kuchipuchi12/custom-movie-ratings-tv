@@ -61,6 +61,8 @@
   .detail img{width:100%;border-radius:10px}
   .err{color:#ff8a80}
   a{color:var(--focus)}
+  a.btn{display:inline-flex;align-items:center;text-decoration:none;color:var(--text)}
+  a.btn.primary{color:#111}
   footer{margin-top:30px;color:var(--muted);font-size:13px}
   #ftoggle{display:none}
   @media (max-width:600px){
@@ -366,11 +368,25 @@ function openDetail(key){
     <h2>${esc(t.title)}</h2><p class="hint">${(t.date||'').slice(0,4)} ${t.type==='tv'?'Series':'Movie'}${t.genres.length?', '+esc(t.genres.join(', ')):''}</p>
     <div class="scores">${t.imdb!=null?`<span class="s imdb">IMDb ${t.imdb.toFixed(1)}</span>`:''}${t.rt!=null?`<span class="s rt">Rotten Tomatoes ${t.rt}%</span>`:''}</div>
     ${t.votes?`<p class="hint">${esc(t.votes)} IMDb votes</p>`:''}
-    <p><strong>Watch on:</strong> ${esc(sv)}</p><p>${esc(t.overview||'')}</p>
+    <div class="row">${watchLinks(t)}</div><p>${esc(t.overview||'')}</p>
     ${t.imdbId?`<p><a href="https://www.imdb.com/title/${t.imdbId}/" target="_blank" rel="noopener">Open on IMDb</a></p>`:''}
-    <div class="row"><button class="btn primary" id="closeDet">Close</button></div></div></div>`;
+    <div class="row"><button class="btn" id="closeDet">Close</button></div></div></div>`;
   $('#detOv').classList.add('open'); $('#closeDet').onclick = closeDetail; $('#closeDet').focus();
   $('#detOv').dataset.ret = key;
+}
+function watchLinks(t){
+  const q = encodeURIComponent(t.title);
+  const out = [];
+  [...t.svc].forEach(id=>{
+    const sv = services.find(s=>s.id===id); if(!sv) return;
+    const n = sv.name.toLowerCase();
+    let url = null;
+    if(n.indexOf('netflix')===0) url = 'https://www.netflix.com/search?q='+q;
+    else if(n.indexOf('hbo')===0 || n==='max') url = 'https://play.hbomax.com/search?q='+q;
+    if(url) out.push(`<a class="btn primary watch" href="${url}" target="_blank" rel="noopener">Watch on ${esc(sv.name)}</a>`);
+  });
+  out.push(`<a class="btn watch" href="https://www.themoviedb.org/${t.type}/${t.id}/watch?locale=${REGION}" target="_blank" rel="noopener">All watch options</a>`);
+  return out.join('');
 }
 function closeDetail(){
   $('#detOv').classList.remove('open');
