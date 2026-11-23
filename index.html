@@ -90,8 +90,8 @@
 
   <section class="filters" id="filters" aria-label="Filters">
     <div class="f"><label>Service</label><div class="chips" id="svcChips"></div></div>
-    <div class="f"><label for="type">Type</label>
-      <select id="type"><option value="all">Movies and series</option><option value="movie">Movies</option><option value="tv">Series</option></select></div>
+    <div class="f"><label>Show</label><div class="chips" id="typeChips">
+      <button class="chip" type="button" data-t="all">All</button><button class="chip" type="button" data-t="movie">Movies</button><button class="chip" type="button" data-t="tv">Series</button></div></div>
     <div class="f"><label for="genre">Genre</label><select id="genre"><option value="">Any genre</option></select></div>
     <div class="f"><label for="yFrom">Year from</label><input type="number" id="yFrom" placeholder="Any"></div>
     <div class="f"><label for="yTo">Year to</label><input type="number" id="yTo" placeholder="Any"></div>
@@ -304,7 +304,7 @@ function renderSvcChips(){
   }
 }
 function syncInputs(){
-  $('#type').value=F.type; $('#genre').value=F.genre; $('#yFrom').value=F.yFrom; $('#yTo').value=F.yTo;
+  document.querySelectorAll('#typeChips .chip').forEach(b=>b.setAttribute('aria-pressed', b.dataset.t===F.type)); $('#genre').value=F.genre; $('#yFrom').value=F.yFrom; $('#yTo').value=F.yTo;
   $('#imdbMin').value=F.imdbMin; $('#rtMin').value=F.rtMin; $('#sort').value=F.sort; outs();
 }
 function outs(){
@@ -396,7 +396,7 @@ document.addEventListener('keydown', e=>{
 
 /* ---------- wiring ---------- */
 const bind = (id, k, ev='change') => $(id).addEventListener(ev, e=>{ F[k]=e.target.value; outs(); saveFilters(); render(); });
-bind('#type','type'); bind('#genre','genre'); bind('#yFrom','yFrom','input'); bind('#yTo','yTo','input');
+document.querySelectorAll('#typeChips .chip').forEach(b=>b.onclick=()=>{ F.type=b.dataset.t; saveFilters(); syncInputs(); render(); }); bind('#genre','genre'); bind('#yFrom','yFrom','input'); bind('#yTo','yTo','input');
 bind('#imdbMin','imdbMin','input'); bind('#rtMin','rtMin','input'); bind('#sort','sort');
 $('#reset').onclick=()=>{ F=Object.assign({}, DEF_FILTERS); saveFilters(); syncInputs(); renderSvcChips(); render(); };
 $('#ftoggle').onclick=e=>{ const o=$('#filters').classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded',o); };
