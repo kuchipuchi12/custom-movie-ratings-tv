@@ -50,7 +50,9 @@
   /* dialogs */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
   .overlay.open{display:flex}
-  .dlg{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:760px;width:100%;max-height:92vh;overflow:auto;padding:22px}
+  .dlg{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:760px;width:100%;max-height:85vh;max-height:85dvh;overflow:auto;-webkit-overflow-scrolling:touch;padding:22px;position:relative}
+  .dlg .s{font-size:14px;padding:3px 7px}
+  .xbtn{position:sticky;top:0;float:right;margin:-8px -8px 0 8px;width:48px;height:48px;padding:0;font-size:20px;z-index:2}
   .dlg h2{margin:0 0 6px;font-size:24px}
   .dlg p{margin:8px 0}
   .field{display:flex;flex-direction:column;gap:6px;margin:14px 0}
@@ -370,7 +372,7 @@ function setStatus(s){ $('#status').textContent = s; }
 function openDetail(key){
   const t = titles.get(key); if(!t) return;
   const sv = [...t.svc].map(id=>(services.find(s=>s.id===id)||{}).name).filter(Boolean).join(', ');
-  $('#det').innerHTML = `<div class="detail">${t.poster?`<img alt="" src="${IMG}w500${t.poster}">`:'<div></div>'}<div>
+  $('#det').innerHTML = `<button class="btn xbtn" id="xDet" aria-label="Close">&#10005;</button><div class="detail">${t.poster?`<img alt="" src="${IMG}w500${t.poster}">`:'<div></div>'}<div>
     <h2>${esc(t.title)}</h2><p class="hint">${(t.date||'').slice(0,4)} ${t.type==='tv'?'Series':'Movie'}${t.genres.length?', '+esc(t.genres.join(', ')):''}</p>
     <div class="scores">${t.imdb!=null?`<span class="s imdb">IMDb ${t.imdb.toFixed(1)}</span>`:''}${t.rt!=null?`<span class="s rt">Rotten Tomatoes ${t.rt}%</span>`:''}</div>
     ${t.votes?`<p class="hint">${esc(t.votes)} IMDb votes</p>`:''}
@@ -378,7 +380,7 @@ function openDetail(key){
     <div class="row">${watchLinks(t)}</div><p>${esc(t.overview||'')}</p>
     ${t.imdbId?`<p><a href="https://www.imdb.com/title/${t.imdbId}/" target="_blank" rel="noopener">Open on IMDb</a></p>`:''}
     <div class="row"><button class="btn" id="closeDet">Close</button></div></div></div>`;
-  $('#detOv').classList.add('open'); $('#closeDet').onclick = closeDetail; $('#closeDet').focus();
+  $('#detOv').classList.add('open'); $('#closeDet').onclick = closeDetail; $('#xDet').onclick = closeDetail; $('#closeDet').focus({preventScroll:true});
   $('#detOv').dataset.ret = key;
 }
 function watchLinks(t){
@@ -410,6 +412,7 @@ $('#grid').addEventListener('keydown', e=>{
   if(j<0){ $('#sort').focus(); return; }
   if(cards[j]){ cards[j].focus(); cards[j].scrollIntoView({block:'nearest'}); }
 });
+$('#detOv').addEventListener('click', e=>{ if(e.target.id==='detOv') closeDetail(); });
 $('#grid').addEventListener('click', e=>{ const c=e.target.closest('.card'); if(c) openDetail(c.dataset.key); });
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape' || e.key==='Backspace' && !/INPUT|SELECT/.test(e.target.tagName)){
