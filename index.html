@@ -36,7 +36,7 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column}
   .card:focus-visible{outline:5px solid var(--focus);transform:scale(1.03)}
-  .poster{aspect-ratio:2/3;background:#262a33;width:100%;object-fit:cover;display:block}
+  .poster{aspect-ratio:2/3;min-height:240px;background:#262a33;width:100%;object-fit:cover;display:block}
   .noposter{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;padding:10px;text-align:center;color:var(--muted)}
   .meta{padding:10px 10px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
   .t{font-weight:700;font-size:15px;line-height:1.25}
@@ -134,6 +134,7 @@ const RATING_TTL = 14*864e5;       // re-check scores after 14 days
 const DEFAULT_SVC = ['Netflix','HBO Max','Max','Disney Plus','SkyShowtime','Amazon Prime Video'];
 
 const $ = s => document.querySelector(s);
+const nz = (v, d) => (v === null || v === undefined) ? d : v;
 const store = {
   get(k, d){ try{ const v = localStorage.getItem('gt.'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem('gt.'+k, JSON.stringify(v)); }catch(e){} }
@@ -176,7 +177,7 @@ async function loadServiceList(){
     tmdb('/watch/providers/tv',{watch_region:REGION})]);
   const map = new Map();
   for(const p of [...m.results, ...t.results]){
-    if(!map.has(p.provider_id)) map.set(p.provider_id, {id:p.provider_id, name:p.provider_name, prio:(p.display_priorities||{})[REGION] ?? p.display_priority ?? 999});
+    if(!map.has(p.provider_id)) map.set(p.provider_id, {id:p.provider_id, name:p.provider_name, prio:nz((p.display_priorities||{})[REGION], nz(p.display_priority, 999))});
   }
   allServices = [...map.values()].sort((a,b)=>a.prio-b.prio);
 }
@@ -326,13 +327,13 @@ function render(){
     return true;
   });
   const by = {
-    imdb:(a,b)=>(b.imdb??-1)-(a.imdb??-1) || b.pop-a.pop,
-    rt:(a,b)=>(b.rt??-1)-(a.rt??-1) || (b.imdb??-1)-(a.imdb??-1),
+    imdb:(a,b)=>nz(b.imdb,-1)-nz(a.imdb,-1) || b.pop-a.pop,
+    rt:(a,b)=>nz(b.rt,-1)-nz(a.rt,-1) || nz(b.imdb,-1)-nz(a.imdb,-1),
     new:(a,b)=>(b.date||'').localeCompare(a.date||''),
     pop:(a,b)=>b.pop-a.pop };
   list.sort(by[F.sort]);
   const grid = $('#grid');
-  const focusedKey = document.activeElement?.dataset?.key;
+  const ae = document.activeElement; const focusedKey = ae && ae.dataset ? ae.dataset.key : undefined;
   if(!list.length){
     grid.innerHTML = `<div class="empty">${titles.size ? 'Nothing matches these filters. Try lowering a minimum or pressing Reset.' : 'Loading...'}</div>`;
   } else {
@@ -355,7 +356,7 @@ function card(t){
   return `<button class="card" data-key="${t.key}">${img}<div class="meta"><div class="t">${esc(t.title)}</div>
     <div class="sub">${y}${y?', ':''}${t.type==='tv'?'Series':'Movie'}</div><div class="sub">${esc(sv)}</div><div class="scores">${scores}</div></div></button>`;
 }
-function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function esc(s){ return String(nz(s,'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function setStatus(s){ $('#status').textContent = s; }
 
 function openDetail(key){
