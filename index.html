@@ -268,7 +268,7 @@ async function loadTitles(fromPage, toPage){
 function enqueueAll(){
   const now = Date.now();
   queue = [...titles.values()]
-    .filter(t=>!(t.imdbId===null || (t.imdbId && cache.ratings[t.imdbId] && now - cache.ratings[t.imdbId].at < RATING_TTL)))
+    .filter(t=>!(t.imdbId===null || (t.imdbId && cache.ratings[t.imdbId] && cache.ratings[t.imdbId].src && now - cache.ratings[t.imdbId].at < RATING_TTL)))
     .sort((a,b)=>b.pop-a.pop);
   pump();
 }
@@ -291,7 +291,7 @@ async function enrich(t){
   const r = await (await fetch(`${OMDB}?apikey=${encodeURIComponent(keys.omdb)}&i=${t.imdbId}`)).json();
   if(r.Response === 'False'){ if(/limit/i.test(r.Error||'')) { usage.n = OMDB_DAILY; stopped='limit'; } return; }
   const imdb = parseFloat(r.imdbRating); const rtR = (r.Ratings||[]).find(x=>x.Source==='Rotten Tomatoes');
-  const rec = {imdb: isNaN(imdb)?null:imdb, votes:r.imdbVotes||'', rt: rtR?parseInt(rtR.Value):null, at:Date.now()};
+  const rec = {imdb: isNaN(imdb)?null:imdb, votes:r.imdbVotes||'', rt: rtR?parseInt(rtR.Value):null, src:(r.Ratings||[]).map(x=>x.Source+' '+x.Value).join(', ') || 'none', at:Date.now()};
   cache.ratings[t.imdbId] = rec; Object.assign(t, rec);
 }
 let saveTimer;
@@ -374,6 +374,7 @@ function openDetail(key){
     <h2>${esc(t.title)}</h2><p class="hint">${(t.date||'').slice(0,4)} ${t.type==='tv'?'Series':'Movie'}${t.genres.length?', '+esc(t.genres.join(', ')):''}</p>
     <div class="scores">${t.imdb!=null?`<span class="s imdb">IMDb ${t.imdb.toFixed(1)}</span>`:''}${t.rt!=null?`<span class="s rt">Rotten Tomatoes ${t.rt}%</span>`:''}</div>
     ${t.votes?`<p class="hint">${esc(t.votes)} IMDb votes</p>`:''}
+    ${t.src?`<p class="hint">Scores received: ${esc(t.src)}</p>`:''}
     <div class="row">${watchLinks(t)}</div><p>${esc(t.overview||'')}</p>
     ${t.imdbId?`<p><a href="https://www.imdb.com/title/${t.imdbId}/" target="_blank" rel="noopener">Open on IMDb</a></p>`:''}
     <div class="row"><button class="btn" id="closeDet">Close</button></div></div></div>`;
